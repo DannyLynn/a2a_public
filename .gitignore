@@ -11,3 +11,5 @@ build/
 .DS_Store
 .idea/
 backend/a2a_local.db
+frontend/node_modules/
+frontend/dist/
