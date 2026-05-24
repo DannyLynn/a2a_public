@@ -1,7 +1,7 @@
 import os
 import time
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 import requests
 
@@ -22,7 +22,7 @@ class AgentClient:
         self.server_url = server_url.rstrip("/")
         self.poll_interval = poll_interval
         self.timeout = timeout
-        self._handler: Callable[[Message], str | None] | None = None
+        self._handler: Optional[Callable[[Message], Optional[str]]] = None
         self._session = requests.Session()
         self._session.headers.update(
             {
@@ -41,14 +41,14 @@ class AgentClient:
             poll_interval=float(os.getenv("A2A_POLL_INTERVAL", "3")),
         )
 
-    def on_message(self, handler: Callable[[Message], str | None]) -> Callable[[Message], str | None]:
+    def on_message(self, handler: Callable[[Message], Optional[str]]) -> Callable[[Message], Optional[str]]:
         self._handler = handler
         return handler
 
     def heartbeat(self) -> None:
         self._post("/sdk/heartbeat", {"agent_id": self.agent_id})
 
-    def get_pending_messages(self) -> list[Message]:
+    def get_pending_messages(self) -> List[Message]:
         response = self._session.get(
             f"{self.server_url}/sdk/messages/pending",
             params={"agent_id": self.agent_id},
@@ -58,7 +58,7 @@ class AgentClient:
         data = response.json()
         return [Message.from_dict(item) for item in data.get("messages", data)]
 
-    def send_message(self, to_agent_id: str, text: str) -> dict[str, Any]:
+    def send_message(self, to_agent_id: str, text: str) -> Dict[str, Any]:
         return self._post(
             "/sdk/messages/send",
             {
@@ -87,7 +87,7 @@ class AgentClient:
                 print(f"[a2a] {type(exc).__name__}: {exc}")
             time.sleep(self.poll_interval)
 
-    def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def _post(self, path: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         response = self._session.post(f"{self.server_url}{path}", json=payload, timeout=self.timeout)
         response.raise_for_status()
         if not response.content:

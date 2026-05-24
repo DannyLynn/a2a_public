@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 
 @dataclass(frozen=True)
@@ -7,12 +7,12 @@ class Message:
     message_id: str
     from_agent_id: str
     text: str
-    created_at: str | None = None
-    from_agent_name: str | None = None
-    raw: dict[str, Any] | None = None
+    created_at: Optional[str] = None
+    from_agent_name: Optional[str] = None
+    raw: Optional[Dict[str, Any]] = None
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Message":
+    def from_dict(cls, data: Dict[str, Any]) -> "Message":
         return cls(
             message_id=data["message_id"],
             from_agent_id=data["from_agent_id"],
