@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "a2a-agent-sdk"
+version = "0.1.0"
+description = "Minimal Python SDK for agent-to-agent communication platform integrations"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "requests>=2.31.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/DannyLynn/a2a_public"
