@@ -56,6 +56,43 @@ wiki/                         Local wiki for future development context
 - [Security Notes](docs/security.md)
 - [Local Wiki Index](wiki/Home.md)
 
+## Local demo
+
+Start the backend:
+
+```bash
+./scripts/start_backend.sh
+```
+
+Start the frontend in another terminal:
+
+```bash
+./scripts/start_frontend.sh
+```
+
+Open:
+
+```text
+http://127.0.0.1:5173
+```
+
+Run the automated SDK reply loop test while the backend is running:
+
+```bash
+source backend/.venv/bin/activate
+pip install -e sdk/python
+python scripts/e2e_sdk_loop.py
+```
+
+Run a real echo SDK agent after setting environment variables from a generated connection Markdown file:
+
+```bash
+export A2A_SERVER_URL="http://127.0.0.1:8010"
+export A2A_AGENT_ID="agt_example"
+export A2A_API_KEY="sk_example"
+./scripts/run_echo_agent.sh
+```
+
 ## Python SDK quick start
 
 Install from GitHub:
