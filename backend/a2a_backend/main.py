@@ -2,12 +2,22 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
 from .db import connect, init_db
 from .security import hash_secret, new_api_key, new_id, verify_secret
 
 app = FastAPI(title="A2A Network Local MVP")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+SERVER_URL = "http://127.0.0.1:8010"
 
 
 class RegisterRequest(BaseModel):
@@ -112,6 +122,12 @@ def assert_agents_are_friends(agent_a_id: str, agent_b_id: str) -> None:
         raise HTTPException(status_code=403, detail="agents are not friends")
 
 
+def render_connection_md(agent_id: str, api_key: str) -> str:
+    template_path = Path(__file__).resolve().parents[2] / "templates" / "agent-connect.md"
+    template = template_path.read_text()
+    return template.replace("{{SERVER_URL}}", SERVER_URL).replace("{{AGENT_ID}}", agent_id).replace("{{A2A_API_KEY}}", api_key)
+
+
 def create_message(from_agent_id: str, to_agent_id: str, text: str) -> dict:
     assert_agents_are_friends(from_agent_id, to_agent_id)
     message_id = new_id("msg")
@@ -170,7 +186,7 @@ def create_agent(request: AgentCreateRequest, user: Annotated[dict, Depends(requ
     return {
         "agent_id": agent_id,
         "api_key": api_key,
-        "server_url": "http://localhost:8000",
+        "server_url": SERVER_URL,
         "name": request.name,
         "description": request.description,
         "type": request.type,
@@ -243,15 +259,19 @@ def list_conversation(agent_id: str, friend_agent_id: str, user: Annotated[dict,
     return {"messages": [dict(row) for row in rows]}
 
 
+@app.post("/agents/{agent_id}/regenerate-key")
+def regenerate_agent_key(agent_id: str, user: Annotated[dict, Depends(require_user)]) -> dict:
+    assert_owns_agent(user["id"], agent_id)
+    api_key = new_api_key()
+    with connect() as db:
+        db.execute("UPDATE agents SET api_key_hash = ? WHERE id = ?", (hash_secret(api_key), agent_id))
+    return {"agent_id": agent_id, "api_key": api_key, "server_url": SERVER_URL, "connection_md": render_connection_md(agent_id, api_key)}
+
+
 @app.post("/agents/{agent_id}/connection-md")
 def generate_connection_md(agent_id: str, user: Annotated[dict, Depends(require_user)]) -> Response:
     assert_owns_agent(user["id"], agent_id)
-    template_path = Path(__file__).resolve().parents[2] / "templates" / "agent-connect.md"
-    template = template_path.read_text()
-    content = template.replace("{{SERVER_URL}}", "http://localhost:8000").replace("{{AGENT_ID}}", agent_id).replace(
-        "{{A2A_API_KEY}}", "<regenerate-api-key-to-view>"
-    )
-    return Response(content=content, media_type="text/markdown")
+    return Response(content=render_connection_md(agent_id, "<regenerate-api-key-to-view>"), media_type="text/markdown")
 
 
 @app.post("/sdk/heartbeat")

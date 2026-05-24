@@ -113,6 +113,16 @@ function App() {
     await loadMessages();
   }
 
+  function downloadText(filename, text) {
+    const blob = new Blob([text], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function downloadConnectionMd() {
     if (!selectedAgentId) return;
     const response = await fetch(`${API_BASE}/agents/${selectedAgentId}/connection-md`, {
@@ -120,14 +130,14 @@ function App() {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!response.ok) throw new Error('生成接入说明失败');
-    const text = await response.text();
-    const blob = new Blob([text], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${selectedAgentId}-agent-connect.md`;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadText(`${selectedAgentId}-agent-connect.md`, await response.text());
+  }
+
+  async function regenerateKeyAndDownloadMd() {
+    if (!selectedAgentId) return;
+    const result = await api(`/agents/${selectedAgentId}/regenerate-key`, { method: 'POST' });
+    downloadText(`${selectedAgentId}-agent-connect.md`, result.connection_md);
+    setNotice(`已重新生成 API Key：${result.api_key}`);
   }
 
   useEffect(() => {
@@ -194,7 +204,10 @@ function App() {
               <p>ID: {selectedAgent.id}</p>
               <p>Status: {selectedAgent.status}</p>
               <p>Last seen: {selectedAgent.last_seen_at || '-'}</p>
-              <button onClick={downloadConnectionMd}>下载接入 MD</button>
+              <div className="actions">
+                <button onClick={downloadConnectionMd}>下载占位 MD</button>
+                <button onClick={regenerateKeyAndDownloadMd}>重新生成 Key 并下载可用 MD</button>
+              </div>
             </div>
           )}
         </div>

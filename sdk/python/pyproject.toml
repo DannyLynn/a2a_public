@@ -14,3 +14,6 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/DannyLynn/a2a_public"
+
+[tool.hatch.build.targets.wheel]
+packages = ["a2a"]
